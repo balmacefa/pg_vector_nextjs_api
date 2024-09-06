@@ -3,6 +3,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { delete_index_by_id } from "../api/v1/index/db";
 
 // Tipo para los datos de un índice
 type Index = {
@@ -18,12 +19,14 @@ const DashboardPage = () => {
   const [indexes, setIndexes] = useState<Index[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [deleteIndex, setDeleteIndex] = useState<Index | null>(null);
+  const [confirmName, setConfirmName] = useState<string>("");
 
   // Función para obtener los índices desde la API
   useEffect(() => {
     const fetchIndexes = async () => {
       try {
-        const response = await fetch("/api/indexes");
+        const response = await fetch("/api/v1/index");
         const data = await response.json();
 
         if (response.ok) {
@@ -82,14 +85,14 @@ const DashboardPage = () => {
                   {new Date(index.createdAt).toLocaleDateString()}
                 </td>
                 <td className="p-4">
-                  <Link href={`/indexes/${index.id}`}>
+                  <Link href={`/index/${index.id}`}>
                     <button className="bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-2 rounded">
                       Ver
                     </button>
                   </Link>
                   <button
                     className="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 ml-2 rounded"
-                    onClick={() => handleDelete(index.id)}
+                    onClick={() => setDeleteIndex(index)}
                   >
                     Eliminar
                   </button>
@@ -101,18 +104,63 @@ const DashboardPage = () => {
       ) : (
         <div>No hay índices creados.</div>
       )}
+
+      {/* Modal para confirmar eliminación */}
+      {deleteIndex && (
+        <div className="fixed z-10 inset-0 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen px-4">
+            <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-lg">
+              <h2 className="text-xl font-bold mb-4">
+                Eliminar Índice:{" "}
+                <span className="text-gray-600">{deleteIndex.name}</span>
+              </h2>
+              <p className="mb-4">
+                Para confirmar la eliminación, escribe el nombre del índice:
+                <strong className="my-2"> {deleteIndex.name}</strong>
+              </p>
+              <input
+                type="text"
+                className="border p-2 w-full mb-4"
+                placeholder={`Escribe "${deleteIndex.name}" para confirmar`}
+                value={confirmName}
+                onChange={(e) => setConfirmName(e.target.value)}
+              />
+              <div className="flex justify-end">
+                <button
+                  className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded mr-2"
+                  onClick={() => closeModal()}
+                >
+                  Cancelar
+                </button>
+                <button
+                  className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+                  onClick={() => handleDelete(deleteIndex.id, deleteIndex.name)}
+                  disabled={confirmName !== deleteIndex.name}
+                >
+                  Confirmar eliminación
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 
+  // Función para cerrar el modal
+  function closeModal() {
+    setDeleteIndex(null);
+    setConfirmName("");
+  }
+
   // Función para eliminar un índice
-  async function handleDelete(id: string) {
-    if (confirm("¿Estás seguro de que quieres eliminar este índice?")) {
+  async function handleDelete(id: string, name: string) {
+    if (confirmName === name) {
       try {
-        const response = await fetch(`/api/indexes/${id}`, {
-          method: "DELETE",
-        });
-        if (response.ok) {
+        const response = await delete_index_by_id(id);
+        if (response) {
           setIndexes((prev) => prev.filter((index) => index.id !== id));
+          closeModal(); // Cerrar el modal después de eliminar
         } else {
           setError("No se pudo eliminar el índice.");
         }
