@@ -2,7 +2,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 
 // Tipo para los datos de un índice
@@ -19,8 +18,6 @@ const DashboardPage = () => {
   const [indexes, setIndexes] = useState<Index[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-
-  const router = useRouter();
 
   // Función para obtener los índices desde la API
   useEffect(() => {
